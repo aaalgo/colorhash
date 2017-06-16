@@ -10,6 +10,7 @@
 #include "colorhash.h"
 
 using std::cout;
+using std::cerr;
 using std::endl;
 using std::string;
 using std::vector;
@@ -47,17 +48,19 @@ float l2 (vector<float> const &o1, vector<float> const &o2) {
 }
 
 int main (int argc, char *argv[]) {
-    int c1, c2, c3, code;
+    int c1, c2, c3;
     string list;
+    string cs;
 
     namespace po = boost::program_options;
     po::options_description desc("Allowed options");
     desc.add_options()
         ("help,h", "produce help message.")
-        ("c1", po::value(&c1)->default_value(8), "")
-        ("c2", po::value(&c2)->default_value(4), "")
-        ("c3", po::value(&c3)->default_value(4), "")
-        ("code", po::value(&code)->default_value(CV_BGR2Lab), "")
+        ("c1", po::value(&c1)->default_value(6), "")
+        ("c2", po::value(&c2)->default_value(6), "")
+        ("c3", po::value(&c3)->default_value(6), "")
+        //("code", po::value(&code)->default_value(CV_BGR2Lab), "")
+        ("cs", po::value(&cs)->default_value("rgb"), "rgb, hsv, lab")
         ("list", po::value(&list)->default_value("list"), "")
         ;
 
@@ -75,6 +78,17 @@ int main (int argc, char *argv[]) {
         return 0;
     }
 
+    int code = 0;
+    if (cs == "rgb") {
+        code = 0;
+    }
+    else if (cs == "lab") {
+        code = CV_BGR2Lab;
+    }
+    else if (cs == "hsv") {
+        code = CV_BGR2HSV;
+    }
+
     colorhash::Histogram hist(c1, c2, c3, code);
     vector<string> paths;
 
@@ -87,16 +101,26 @@ int main (int argc, char *argv[]) {
     }
     boost::progress_display progress(paths.size());
     kgraph::Matrix<float> data(paths.size(), hist.size());
+    vector<unsigned> bad;
 #pragma omp parallel for
     for (unsigned i = 0; i < paths.size(); ++i) {
         cv::Mat image = cv::imread(paths[i], CV_LOAD_IMAGE_COLOR);
-        cv::Mat thumb;
-        LimitSize(image, 256, &thumb);
-        hist.apply(thumb, data[i]);
+        if (image.total() == 0) {
+#pragma omp critical
+            bad.push_back(i);
+        }
+        else {
+            cv::Mat thumb;
+            LimitSize(image, 256, &thumb);
+            hist.apply(thumb, data[i]);
+        }
 #pragma omp critical
         ++progress;
     }
-    data.save_lshkit(fmt::format("%d-%d-%d-%d", c1, c2, c3, code));
+    data.save_lshkit(fmt::format("{}{}{}{}", cs, c1, c2, c3));
+    for (auto v: bad) {
+        cerr << paths[v] << endl;
+    }
     return 0;
 
     /*
