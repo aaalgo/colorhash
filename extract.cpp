@@ -49,6 +49,7 @@ float l2 (vector<float> const &o1, vector<float> const &o2) {
 
 int main (int argc, char *argv[]) {
     int c1, c2, c3;
+    float smooth;
     string list;
     string cs;
 
@@ -56,12 +57,13 @@ int main (int argc, char *argv[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
         ("help,h", "produce help message.")
-        ("c1", po::value(&c1)->default_value(6), "")
-        ("c2", po::value(&c2)->default_value(6), "")
-        ("c3", po::value(&c3)->default_value(6), "")
+        ("c1", po::value(&c1)->default_value(7), "")
+        ("c2", po::value(&c2)->default_value(7), "")
+        ("c3", po::value(&c3)->default_value(7), "")
         //("code", po::value(&code)->default_value(CV_BGR2Lab), "")
         ("cs", po::value(&cs)->default_value("rgb"), "rgb, hsv, lab")
         ("list", po::value(&list)->default_value("list"), "")
+        ("smooth", po::value(&smooth)->default_value(10), "")
         ;
 
     po::positional_options_description p;
@@ -89,7 +91,7 @@ int main (int argc, char *argv[]) {
         code = CV_BGR2HSV;
     }
 
-    colorhash::Histogram hist(c1, c2, c3, code);
+    colorhash::Histogram hist(c1, c2, c3, code, smooth);
     vector<string> paths;
 
     {
@@ -111,7 +113,7 @@ int main (int argc, char *argv[]) {
         }
         else {
             cv::Mat thumb;
-            LimitSize(image, 256, &thumb);
+            LimitSize(image, 128, &thumb);
             hist.apply(thumb, data[i]);
         }
 #pragma omp critical
