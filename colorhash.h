@@ -85,18 +85,18 @@ namespace colorhash {
             }
         }
 
-        void quantize (float const *hist, uint8_t *bins) const {
+        void quantize (float const *hist, uint8_t *bytes) const {
             for (unsigned i = 0; i < bins; ++i) {
                 unsigned v = std::round(hist[i] * quant_scale * 256);
                 if (v > 255) v = 255;
-                bins[i] = v;
+                bytes[i] = v;
             }
         }
 
-        void apply (cv::Mat &image, uint8_t *hist) const {
+        void apply (cv::Mat &image, uint8_t *bytes) const {
             float h[bins];
             apply(image, h);
-            quantize(h, bins);
+            quantize(h, bytes);
         }
     };
 }
