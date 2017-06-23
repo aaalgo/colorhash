@@ -6,15 +6,16 @@
 namespace colorhash {
 
     class Histogram {
-        unsigned c1, c2, c3, code;
+        unsigned c1, c2, c3, bins, code;
         float smooth;
+        float quant_scale;
     public:
-        Histogram (unsigned c1_ = 7, unsigned c2_ = 7, unsigned c3_ = 7, unsigned code_ = 0, float sm = 10)
-            : c1(c1_), c2(c2_), c3(c3_), code(code_), smooth(sm) {
+        Histogram (unsigned c1_ = 7, unsigned c2_ = 7, unsigned c3_ = 7, unsigned code_ = 0, float sm = 10, float qs = 4)
+            : c1(c1_), c2(c2_), c3(c3_), bins(c1 * c2 * c3), code(code_), smooth(sm), quant_scale(qs) {
         }
         // returns histogram dimensions
         unsigned size () const {
-            return c1 * c2 * c3;
+            return bins;
         }
         // extract histogram, output address must be pre-allocated to hold >= size() floats
         void apply (cv::Mat &image, float *hist) const {
@@ -26,7 +27,7 @@ namespace colorhash {
             else {
                 cv::cvtColor(image, im, code);
             }
-            unsigned sz = size();
+            unsigned sz = bins;
             std::fill(hist, hist + sz, 0);
             for (int y = 0; y < im.rows; ++y) {
                 uint8_t const *p = im.ptr<uint8_t const>(y);
@@ -83,16 +84,21 @@ namespace colorhash {
                 hist[i] /= total;
             }
         }
-    };
 
-    class Hash {
-    public:
-        // return hash size in bytes
-        unsigned size () const;
-        // output address must be pre-allocated to hold >= bytes() bytes
-        virtual void apply (float const *hist, uint8_t *hash) const;
-    };
+        void quantize (float const *hist, uint8_t *bins) const {
+            for (unsigned i = 0; i < bins; ++i) {
+                unsigned v = std::round(hist[i] * quant_scale * 256);
+                if (v > 255) v = 255;
+                bins[i] = v;
+            }
+        }
 
+        void apply (cv::Mat &image, uint8_t *hist) const {
+            float h[bins];
+            apply(image, h);
+            quantize(h, bins);
+        }
+    };
 }
 
 #endif
