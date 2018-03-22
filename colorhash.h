@@ -93,11 +93,20 @@ namespace colorhash {
             }
         }
 
+        void quantize (float const *hist, float *bytes) const {
+            for (unsigned i = 0; i < bins; ++i) {
+                float v = hist[i] * quant_scale * 256;
+                if (v >= 255.4) v = 255.4;
+                bytes[i] = v;
+            }
+        }
+
         void apply (cv::Mat &image, uint8_t *bytes) const {
             float h[bins];
             apply(image, h);
             quantize(h, bytes);
         }
+
     };
 }
 
